@@ -2,7 +2,7 @@
 """ 
 Copyright 2011 © Ooyala, Inc.  All rights reserved.
 
-  Ooyala, Inc. (“Ooyala”) hereby grants permission, free of charge, to any person or entity obtaining a copy of the software code provided in source code format via this webpage and direct links contained within this webpage and any associated documentation (collectively, the "Software"), to use, copy, modify, merge, and/or publish the Software and, subject to pass-through of all terms and conditions hereof, permission to transfer, distribute and sublicense the Software; all of the foregoing subject to the following terms and conditions:
+  Ooyala, Inc. ("Ooyala") hereby grants permission, free of charge, to any person or entity obtaining a copy of the software code provided in source code format via this webpage and direct links contained within this webpage and any associated documentation (collectively, the "Software"), to use, copy, modify, merge, and/or publish the Software and, subject to pass-through of all terms and conditions hereof, permission to transfer, distribute and sublicense the Software; all of the foregoing subject to the following terms and conditions:
 
   1.  The above copyright notice and this permission notice shall be included in all copies or portions of the Software.
 
@@ -12,7 +12,7 @@ Copyright 2011 © Ooyala, Inc.  All rights reserved.
 
   4.  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, RELATING TO, ARISING FROM, IN CONNECTION WITH, OR INCIDENTAL TO THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-  5.   TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, (i) IN NO EVENT SHALL OOYALA BE LIABLE FOR ANY CONSEQUENTIAL, INCIDENTAL, INDIRECT, SPECIAL, PUNITIVE, OR OTHER DAMAGES WHATSOEVER (INCLUDING, WITHOUT LIMITATION, DAMAGES FOR LOSS OF BUSINESS PROFITS, BUSINESS INTERRUPTION, LOSS OF BUSINESS INFORMATION, OR OTHER PECUNIARY LOSS) RELATING TO, ARISING FROM, IN CONNECTION WITH, OR INCIDENTAL TO THE SOFTWARE OR THE USE OF OR INABILITY TO USE THE SOFTWARE, EVEN IF OOYALA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES, AND (ii) OOYALA’S TOTAL AGGREGATE LIABILITY RELATING TO, ARISING FROM, IN CONNECTION WITH, OR INCIDENTAL TO THE SOFTWARE SHALL BE LIMITED TO THE ACTUAL DIRECT DAMAGES INCURRED UP TO MAXIMUM AMOUNT OF FIFTY DOLLARS ($50).
+  5.   TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, (i) IN NO EVENT SHALL OOYALA BE LIABLE FOR ANY CONSEQUENTIAL, INCIDENTAL, INDIRECT, SPECIAL, PUNITIVE, OR OTHER DAMAGES WHATSOEVER (INCLUDING, WITHOUT LIMITATION, DAMAGES FOR LOSS OF BUSINESS PROFITS, BUSINESS INTERRUPTION, LOSS OF BUSINESS INFORMATION, OR OTHER PECUNIARY LOSS) RELATING TO, ARISING FROM, IN CONNECTION WITH, OR INCIDENTAL TO THE SOFTWARE OR THE USE OF OR INABILITY TO USE THE SOFTWARE, EVEN IF OOYALA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES, AND (ii) OOYALA'S TOTAL AGGREGATE LIABILITY RELATING TO, ARISING FROM, IN CONNECTION WITH, OR INCIDENTAL TO THE SOFTWARE SHALL BE LIMITED TO THE ACTUAL DIRECT DAMAGES INCURRED UP TO MAXIMUM AMOUNT OF FIFTY DOLLARS ($50).
 """ 
 
 import hashlib, base64, urllib, httplib, time, logging, json
@@ -22,22 +22,24 @@ DEFAULT_EXPIRATION_WINDOW = 15
 DEFAULT_ROUND_UP_TIME = 300
 API_VERSION = 'v2'
 DEFAULT_BASE_URL = 'api.ooyala.com'
+DEFAULT_CACHE_BASE_URL = 'cdn-api.ooyala.com'
 
 logging.basicConfig(format='',level=logging.INFO)
 
 class OoyalaAPI(object):
     def __init__(self, 
-                secret_key,
                 api_key,
+                secret_key,
                 base_url=DEFAULT_BASE_URL,
+                cache_base_url=DEFAULT_CACHE_BASE_URL,
                 expiration=DEFAULT_EXPIRATION_WINDOW):
         """OoyalaAPI Constructor
         
         Type signature:
             (str, str, str:DEFAULT_BASE_URL, int:DEFAULT_EXPIRATION_WINDOW) -> OoyalaAPI
         Parameters:
-            secret_key - The secret key
             api_key    - The API key
+            secret_key - The secret key
             base_url   - the url's base
             expiration - the expiration window, in seconds
         Example:
@@ -46,6 +48,7 @@ class OoyalaAPI(object):
         self._secret_key = secret_key
         self._api_key = api_key
         self._base_url = base_url
+        self._cache_base_url = cache_base_url
         self._expiration_window = expiration
         self._response_headers = [()]
 
@@ -70,13 +73,14 @@ class OoyalaAPI(object):
         # Convert the body to JSON format
         json_body = ''
         if (body is not None):
-            json_body = json.dumps(body)
+            json_body = json.dumps(body) if type(body) is not str else body
 
         url = self.build_path_with_authentication_params(http_method, path, params, json_body)
         if url is None:
             return None
-
-        connection = httplib.HTTPSConnection(self.base_url)
+        
+        base_url = self.base_url if http_method != 'GET' else self.cache_base_url
+        connection = httplib.HTTPSConnection(base_url)
 
         #hack needed when a PUT request has an empty body
         headers = {}
@@ -318,6 +322,33 @@ class OoyalaAPI(object):
         self._base_url = value
 
     base_url = property(get_base_url, set_base_url)
+    
+    def get_cache_base_url(self):
+        """Cache base url getter.
+            
+            Type signature:
+            () -> str
+            Example:
+            api = OoyalaAPI(...)
+            print 'the cache base url is ', api.cache_base_url
+            """
+        return self._cache_base_url
+    
+    def set_cache_base_url(self, value):
+        """Cache base url setter.
+            
+            Type signature:
+            (str) -> None
+            Parameters:
+            value - the url's base to be set
+            Example:
+            api = OoyalaAPI(...)
+            api.base_url = "cache.api.ooyala.com"
+            print 'the new url's base is ', api.cache_base_url
+            """
+        self._cache_base_url = value
+    
+    cache_base_url = property(get_cache_base_url, set_cache_base_url)
 
     def get_expiration_window(self): return self._expiration_window
     def set_expiration_window(self, value): self._expiration_window = value
